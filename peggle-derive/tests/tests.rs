@@ -17,7 +17,10 @@ fn test_one() {
 
     let _second = "asdf".to_string();
     match Test01::parse("ggggasdf fdsa 0") {
-        Ok(Test01 { first: 0u32, second: _second }) => (),
+        Ok(Test01 {
+            first: 0u32,
+            second: _second,
+        }) => (),
         Ok(e) => panic!("wrong value returned: {:?}", e),
         Err(e) => panic!("err when should have been Ok: {:?}", e),
     }
@@ -44,7 +47,6 @@ fn test_two() {
     }
 }
 
-
 #[derive(Debug, Parse)]
 pub enum Test03 {
     #[peg("hello<0>")]
@@ -66,11 +68,9 @@ fn test_three() {
     }
 }
 
-
 #[derive(Debug, Parse)]
 #[peg("<0>hello<1>")]
 pub struct Test04(#[peg("why ")] String, #[peg(", world")] String);
-
 
 #[test]
 fn test_four() {
