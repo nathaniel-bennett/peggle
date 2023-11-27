@@ -135,7 +135,7 @@ impl<T: Parse> Parse for Box<T> {
 }
 
 impl Parse for bool {
-    #[inline] // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
+    #[inline]
     fn parse_at(mut index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         match index.next_multiple() {
             Some(['t', 'r', 'u', 'e']) => Ok((true, index)),
