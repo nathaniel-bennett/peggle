@@ -1,4 +1,4 @@
-const ATTRIBUTE_NAME: &'static str = "peg";
+const ATTRIBUTE_NAME: &str = "peg";
 
 /// The root element for which `peggle` is being derived.
 pub enum DeriveInfo {
@@ -34,11 +34,11 @@ impl DeriveInfo {
                     pegex,
                     fields: fields.named.iter().map(|field| {
                         let (inner_ty, cardinality, is_boxed) = get_inner_type(&field.ty);
-                        let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).and_then(|attr| {
+                        let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).map(|attr| {
                             let syn::Meta::List(pegex_list) = &attr.meta else {
                                 panic!("'pegex' attribute must be a Meta::List attribute");
                             };
-                            Some(pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value())
+                            pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value()
                         });
 
                         FieldInfo {
@@ -71,11 +71,11 @@ impl DeriveInfo {
                     pegex,
                     fields: fields.unnamed.iter().enumerate().map(|(idx, field)| {
                         let (inner_ty, cardinality, is_boxed) = get_inner_type(&field.ty);
-                        let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).and_then(|attr| {
+                        let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).map(|attr| {
                             let syn::Meta::List(pegex_list) = &attr.meta else {
                                 panic!("'pegex' attribute must be a Meta::List attribute");
                             };
-                            Some(pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value())
+                            pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value()
                         });
 
                         FieldInfo {
@@ -91,10 +91,7 @@ impl DeriveInfo {
             }
             syn::Data::Enum(syn::DataEnum { variants, .. }) => {
                 assert!(
-                    ast.attrs
-                        .iter()
-                        .find(|&a| a.path().is_ident(ATTRIBUTE_NAME))
-                        .is_none(),
+                    !ast.attrs.iter().any(|a| a.path().is_ident(ATTRIBUTE_NAME)),
                     "'pegex' attribute applied erroneously to enum type"
                 );
 
@@ -123,11 +120,11 @@ impl DeriveInfo {
                 pegex,
                 fields: variant.fields.iter().enumerate().map(|(idx, field)| {
                     let (inner_ty, cardinality, is_boxed) = get_inner_type(&field.ty);
-                    let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).and_then(|attr| {
+                    let field_pegex = field.attrs.iter().find(|&a| a.path().is_ident(ATTRIBUTE_NAME)).map(|attr| {
                         let syn::Meta::List(pegex_list) = &attr.meta else {
                             panic!("'pegex' attribute must be a Meta::List attribute");
                         };
-                        Some(pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value())
+                        pegex_list.parse_args::<syn::LitStr>().expect("Invalid format for pegex expression: must be a string literal").value()
                     });
 
                     FieldInfo {

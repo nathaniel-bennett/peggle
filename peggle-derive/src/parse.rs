@@ -42,16 +42,16 @@ impl FieldRequirements {
 
         match field_info.cardinality {
             FieldCardinality::Single if max > 1 || min < 1 =>
-                return Err(format!("field '{}' required exactly once, yet regular expression allows for variable number of instantiations", field_name)),
+                Err(format!("field '{}' required exactly once, yet regular expression allows for variable number of instantiations", field_name)),
             FieldCardinality::Option if max > 1 =>
-                return Err(format!("field '{}' is optional (0 or 1 instantiations), yet regular expression could allow for more than one instantiation", field_name)),
+                Err(format!("field '{}' is optional (0 or 1 instantiations), yet regular expression could allow for more than one instantiation", field_name)),
             _ => Ok(()),
         }
     }
 
     fn check_choice_difference(&self) -> Result<(), String> {
         if let (Some(expected), actual) = self.field_min_max_stack.last().expect("1") {
-            for (field_name, _) in &expected.0 {
+            for field_name in expected.0.keys() {
                 let field_info = self.fields.get(field_name).expect("Missing field name");
 
                 if field_info.cardinality == FieldCardinality::Single
@@ -64,7 +64,7 @@ impl FieldRequirements {
                 }
             }
 
-            for (field_name, _) in &actual.0 {
+            for field_name in actual.0.keys() {
                 let field_info = self.fields.get(field_name).expect("missing field name");
 
                 if field_info.cardinality == FieldCardinality::Single
@@ -377,8 +377,8 @@ fn derive_single_field_fns(field: &FieldInfo) -> proc_macro2::TokenStream {
     }
 }
 
-fn derive_single_field_steps(pegex: &String) -> proc_macro2::TokenStream {
-    let mut index = peggle::Index::new(pegex.as_str());
+fn derive_single_field_steps(pegex: &str) -> proc_macro2::TokenStream {
+    let mut index = peggle::Index::new(pegex);
     let mut nested_expressions = vec![vec![Vec::new()]];
 
     while let Some(c) = index.next() {
@@ -403,7 +403,7 @@ fn derive_single_field_steps(pegex: &String) -> proc_macro2::TokenStream {
     let expr_tokens = nested_expressions
         .last_mut()
         .expect("missing last expr_token")
-        .into_iter()
+        .iter_mut()
         .map(|choice_tokens| {
             quote::quote! {
                 __peggle_curr = __peggle_index;
@@ -474,7 +474,7 @@ fn derive_fields_steps(collection: &CollectionInfo) -> proc_macro2::TokenStream 
     let expr_tokens = nested_expressions
         .last_mut()
         .expect("missing last expr_token")
-        .into_iter()
+        .iter_mut()
         .map(|choice_tokens| {
             quote::quote! {
                 __peggle_curr = __peggle_index;
@@ -1049,7 +1049,7 @@ fn coalesce_topmost_expression(
         });
 }
 
-fn get_repetition_bounds<'a>(mut index: peggle::Index<'a>) -> (usize, usize, peggle::Index<'a>) {
+fn get_repetition_bounds(mut index: peggle::Index<'_>) -> (usize, usize, peggle::Index<'_>) {
     match index.peek() {
         Some('?') => {
             index.next();

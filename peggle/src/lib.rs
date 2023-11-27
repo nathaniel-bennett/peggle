@@ -54,7 +54,7 @@ impl<'a> Index<'a> {
 
     #[inline]
     pub fn advance_to_end(&mut self) {
-        while let Some(_) = self.next() {}
+        for _ in self.by_ref() {}
     }
 }
 
@@ -95,10 +95,10 @@ impl ParseError {
 }
 
 pub trait Parse: Sized {
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError>;
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError>;
 
     #[inline]
-    fn parse_raw_at<'a>(index: Index<'a>) -> Result<(&'a str, Index<'a>), ParseError> {
+    fn parse_raw_at(index: Index<'_>) -> Result<(&str, Index<'_>), ParseError> {
         let (_, new_index) = Self::parse_at(index)?;
 
         let consumed_len = index.remaining.len() - new_index.remaining.len();
@@ -129,7 +129,7 @@ pub trait Parse: Sized {
 
 impl Parse for bool {
     #[inline] // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
-    fn parse_at<'a>(mut index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(mut index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         match index.next_multiple() {
             Some(['t', 'r', 'u', 'e']) => Ok((true, index)),
             Some(['f', 'a', 'l', 's']) if index.next() == Some('e') => Ok((true, index)),
@@ -140,91 +140,91 @@ impl Parse for bool {
 
 impl Parse for u8 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for u16 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for u32 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for u64 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for u128 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for usize {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_unsigned(index)
     }
 }
 
 impl Parse for i8 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for i16 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for i32 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for i64 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for i128 {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for isize {
     #[inline]
-    fn parse_at<'a>(index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         parse_signed(index)
     }
 }
 
 impl Parse for String {
     #[inline]
-    fn parse_at<'a>(mut index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(mut index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         let s = index.remaining.to_string();
         index.advance_to_end();
         Ok((s, index))
@@ -233,7 +233,7 @@ impl Parse for String {
 
 impl Parse for char {
     #[inline]
-    fn parse_at<'a>(mut index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
+    fn parse_at(mut index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
         index
             .next()
             .map(|c| (c, index))
@@ -241,9 +241,9 @@ impl Parse for char {
     }
 }
 
-fn parse_unsigned<'a, I: num::Unsigned + num::CheckedAdd + num::CheckedMul + From<u8>>(
-    mut index: Index<'a>,
-) -> Result<(I, Index<'a>), ParseError> {
+fn parse_unsigned<I: num::Unsigned + num::CheckedAdd + num::CheckedMul + From<u8>>(
+    mut index: Index<'_>,
+) -> Result<(I, Index<'_>), ParseError> {
     let mut value = None;
 
     // Edge case: 0 (no leading zeros are allowed)
@@ -257,7 +257,7 @@ fn parse_unsigned<'a, I: num::Unsigned + num::CheckedAdd + num::CheckedMul + Fro
 
     // Match characters 0-9, checking for overflow
     while let Some(c @ '0'..='9') = index.peek() {
-        let c_val = I::from((c as u8) - ('0' as u8));
+        let c_val = I::from((c as u8) - b'0');
         value = value
             .unwrap_or(I::zero())
             .checked_mul(&10u8.into())
@@ -276,12 +276,9 @@ fn parse_unsigned<'a, I: num::Unsigned + num::CheckedAdd + num::CheckedMul + Fro
         .map(|i| (i, index))
 }
 
-fn parse_signed<
-    'a,
-    I: num::Signed + num::CheckedAdd + num::CheckedSub + num::CheckedMul + From<i8>,
->(
-    mut index: Index<'a>,
-) -> Result<(I, Index<'a>), ParseError> {
+fn parse_signed<I: num::Signed + num::CheckedAdd + num::CheckedSub + num::CheckedMul + From<i8>>(
+    mut index: Index<'_>,
+) -> Result<(I, Index<'_>), ParseError> {
     let mut value = None;
 
     let mut is_negative = false;
