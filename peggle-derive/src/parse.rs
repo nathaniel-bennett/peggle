@@ -166,7 +166,7 @@ impl FieldRequirements {
     }
 }
 
-pub fn derive_unnamed_struct_parse(struct_info: CollectionInfo) -> proc_macro2::TokenStream {
+pub fn derive_unnamed_struct(struct_info: CollectionInfo) -> proc_macro2::TokenStream {
     // First generate field declarations for struct members
     let field_declarations = struct_info.fields.iter().map(|info| {
         let identity = quote::format_ident!("__peggle_field_{}", &info.ident);
@@ -211,7 +211,7 @@ pub fn derive_unnamed_struct_parse(struct_info: CollectionInfo) -> proc_macro2::
     }
 }
 
-pub fn derive_named_struct_parse(struct_info: CollectionInfo) -> proc_macro2::TokenStream {
+pub fn derive_named_struct(struct_info: CollectionInfo) -> proc_macro2::TokenStream {
     // First generate field declarations for struct members
     let field_declarations = struct_info.fields.iter().map(|info| {
         let identity = quote::format_ident!("__peggle_field_{}", &info.ident);
@@ -257,7 +257,7 @@ pub fn derive_named_struct_parse(struct_info: CollectionInfo) -> proc_macro2::To
     }
 }
 
-pub fn derive_enum_parse(e: EnumInfo) -> proc_macro2::TokenStream {
+pub fn derive_enum(e: EnumInfo) -> proc_macro2::TokenStream {
     derive_enum_steps(e.name, e.discriminants)
 }
 
@@ -346,21 +346,21 @@ fn derive_single_field_fns(field: &FieldInfo) -> proc_macro2::TokenStream {
             }
 
             #[inline]
-            fn #field_fn<'a>(index: peggle::Index<'a>) -> Result<(#field_ty, peggle::Index<'a>), peggle::ParseError> {
-                let (restricted_str, new_index) = #restrict_fn(index)?;
+            fn #field_fn<'a>(__peggle_index: peggle::Index<'a>) -> Result<(#field_ty, peggle::Index<'a>), peggle::ParseError> {
+                let (__peggle_restricted_str, __peggle_new_index) = #restrict_fn(__peggle_index)?;
 
-                let restricted_index = peggle::Index {
-                    remaining: restricted_str,
-                    lineno: index.lineno,
-                    colno: index.colno,
+                let __peggle_restricted_index = peggle::Index {
+                    remaining: __peggle_restricted_str,
+                    lineno: __peggle_index.lineno,
+                    colno: __peggle_index.colno,
                 };
-                let (out, end_idx) = #field_ty::parse_at(index)?;
+                let (__peggle_out, __peggle_end_idx) = #field_ty::parse_at(__peggle_restricted_index)?;
 
-                if end_idx.remaining.is_empty() {
-                    Ok((out, new_index))
+                if __peggle_end_idx.remaining.is_empty() {
+                    Ok((__peggle_out, __peggle_new_index))
                 } else {
                     // This may happen if the restriction regex is not a proper subset of the type's input parsing
-                    Err(peggle::ParseError::from_index(new_index))
+                    Err(peggle::ParseError::from_index(__peggle_new_index))
                 }
             }
         }
@@ -387,7 +387,7 @@ fn derive_single_field_steps(pegex: &str) -> proc_macro2::TokenStream {
             ')' => coalesce_topmost_expression(&mut index, &mut nested_expressions, None),
             '|' => nested_expressions.last_mut().expect("6").push(Vec::new()), // Add another option to the current expression
             '[' => match_one_of(&mut index, &mut nested_expressions),
-            '<' | '>' => panic!("carrot brackets reserved for member fields, which are not allowed within a field derive. Use '[<]' and '[>]' to specify literal carrot brackets"),
+            '<' | '>' => panic!("carrot brackets reserved for member fields, which are not allowed within a field derive. Use \"[<]\" and \"[>]\" to specify literal carrot brackets"),
             ']' | '*' | '+' | '?' | '{' | '}' => panic!("unexpected token {} at peggle index {}", c, index.colno),
             '^' | '$' => panic!("{} regex symbol not implemented (prepend a backslash to use the literal `{}` character)", c, c),
             '.' => match_any_character(&mut index, &mut nested_expressions),
@@ -426,7 +426,7 @@ fn derive_single_field_steps(pegex: &str) -> proc_macro2::TokenStream {
         if __peggle_failure {
             Err(peggle::ParseError::from_index(__peggle_curr))
         } else {
-            let __peggle_restricted_str = &__peggle_index.remaining[..__peggle_index.remaining.len() - __peggle_curr.remaining.len()];
+            let __peggle_restricted_str = &__peggle_index.remaining.get(..__peggle_index.remaining.len() - __peggle_curr.remaining.len()).ok_or(peggle::ParseError::from_index(__peggle_curr))?;
             Ok((__peggle_restricted_str, __peggle_curr))
         }
     }
@@ -434,7 +434,7 @@ fn derive_single_field_steps(pegex: &str) -> proc_macro2::TokenStream {
 
 fn derive_fields_steps(collection: &CollectionInfo) -> proc_macro2::TokenStream {
     let mut index = peggle::Index::new(collection.pegex.as_str());
-    let mut nested_expressions = vec![vec![Vec::new()]];
+    let mut nested_expressions = vec![vec![Vec::new()]]; // TODO: a triple-Vec is GNARLY--fix...
     let mut requirements = FieldRequirements::new(collection);
 
     let mut field_steps = Vec::new();
@@ -789,7 +789,7 @@ fn match_one_of(
         if let Some(lit @ (']' | '-')) = index.peek() {
             index.next();
             if let Some('-') = index.peek() {
-                // TODO: this code duplicated
+                // TODO: this code is duplicated
                 index.next();
                 match index
                     .next()

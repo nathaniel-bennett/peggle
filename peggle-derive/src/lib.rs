@@ -1,7 +1,6 @@
 mod parse;
 mod structure;
 
-use parse::{derive_enum_parse, derive_named_struct_parse, derive_unnamed_struct_parse};
 use structure::DeriveInfo;
 
 #[proc_macro_derive(Parse, attributes(peg))]
@@ -12,9 +11,9 @@ pub fn derive_peg_parse(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let ident = ast.ident;
 
     let parse_tokens = match derive_info {
-        DeriveInfo::NamedStruct(st) => derive_named_struct_parse(st),
-        DeriveInfo::UnnamedStruct(st) => derive_unnamed_struct_parse(st),
-        DeriveInfo::Enum(e) => derive_enum_parse(e),
+        DeriveInfo::NamedStruct(st) => parse::derive_named_struct(st),
+        DeriveInfo::UnnamedStruct(st) => parse::derive_unnamed_struct(st),
+        DeriveInfo::Enum(e) => parse::derive_enum(e),
     };
 
     proc_macro::TokenStream::from(quote::quote! {
