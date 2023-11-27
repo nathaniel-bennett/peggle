@@ -1,0 +1,3 @@
+[workspace]
+members = ["peggle", "peggle-derive"]
+resolver = "2"

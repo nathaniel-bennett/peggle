@@ -1,0 +1,19 @@
+[package]
+name = "peggle-derive"
+version = "0.1.0"
+authors = [ "Nathaniel Bennett <me@nathanielbennett.com>" ]
+description = "A simple regex-like parsing library, capable of handling Parsing Expression Grammar (PEG) rules."
+keywords = ["peg", "regex", "parser", "parsing", "grammar"]
+categories = ["parsing"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+peggle = { version = "0.1", path = "../peggle" }
+syn = { version = "2.0", features = ["full", "parsing"] }
