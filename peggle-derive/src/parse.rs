@@ -599,42 +599,40 @@ fn match_posix_class(
     let label: String = index.take(5).collect::<String>();
     match label.as_str() {
         "upper" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= 'A' && __bracket_char <= 'Z') {
+            if let 'A'..='Z' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "lower" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= 'a' && __bracket_char <= 'z') {
+            if let 'a'..='z' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
+
         }),
         "alpha" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= 'A' && __bracket_char <= 'Z') || (__bracket_char >= 'a' && __bracket_char <= 'z') {
+            if let 'a'..='z' | 'A'..='Z' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "digit" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= '0' && __bracket_char <= '9') {
+            if let '0'..='9' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
-        "xdigi" => {
-            let Some('t') = index.next() else {
-                panic!("unrecognized POSIX character class");
-            };
+        "xdigi" if Some('t') == index.next() => {
             bracket_possibilities.push(quote::quote!{
-                if (__bracket_char >= '0' && __bracket_char <= '9') || (__bracket_char >= 'A' && __bracket_char <= 'F') || (__bracket_char >= 'a' && __bracket_char <= 'f') {
+                if let '0'..='9' | 'a'..='f' | 'A'..='F' = __bracket_char {
                     __peggle_failure = false;
                     break #bracket_lifetime
                 }
             });
         },
         "alnum" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= 'A' && __bracket_char <= 'Z') || (__bracket_char >= 'a' && __bracket_char <= 'z') || (__bracket_char >= '0' || __bracket_char <= '9') {
+            if let '0'..='9' | 'a'..='z' | 'A'..='Z' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
@@ -646,31 +644,31 @@ fn match_posix_class(
             }
         }),
         "blank" => bracket_possibilities.push(quote::quote!{
-            if __bracket_char == ' ' || __bracket_char == '\t' {
+            if " \t".contains(__bracket_char) {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "space" => bracket_possibilities.push(quote::quote!{
-            if __bracket_char == ' ' || __bracket_char == '\t' || __bracket_char == '\n' || __bracket_char == '\r' || __bracket_char == '\x0c' || __bracket_char == '\x0b' {
+            if " \t\n\r\x0c\x0b".contains(__bracket_char) {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "cntrl" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= '\x00' && __bracket_char <= '\x1f') || (__bracket_char == '\x7f') {
+            if let '\x00'..='\x1f' | '\x7f' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "graph" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= '\x21' || __bracket_char <= '\x7e') {
+            if let '\x21'..='\x7e' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
         }),
         "print" => bracket_possibilities.push(quote::quote!{
-            if (__bracket_char >= '\x20' && __bracket_char <= '\x7e') {
+            if let '\x20'..='\x7e' = __bracket_char {
                 __peggle_failure = false;
                 break #bracket_lifetime
             }
@@ -702,35 +700,36 @@ fn match_backslash_class(
 
     let character_match_tokens = match character {
         'w' => quote::quote! {
-            if (__backslash_char < 'A' || __backslash_char > 'Z') && (__backslash_char < 'a' || __backslash_char > 'z') && __backslash_char != '_' {
+            let 'a'..='z' | 'A'..='Z' | '_'  = __backslash_char else {
                 __peggle_failure = true;
             }
         },
         'W' => quote::quote! {
-            if (__backslash_char >= 'A' && __backslash_char <= 'Z') || (__backslash_char >= 'a' && __backslash_char <= 'z') || __backslash_char == '_' {
+            if let 'a'..='z' | 'A'..='Z' | '_'  = __backslash_char {
                 __peggle_failure = true;
             }
         },
         'd' => quote::quote! {
-            if __backslash_char < '0' || __backslash_char > '9' {
+            let '0'..='9'  = __backslash_char else {
                 __peggle_failure = true;
             }
         },
         'D' => quote::quote! {
-            if __backslash_char >= '0' && __backslash_char <= '9' {
+            if let '0'..='9'  = __backslash_char {
                 __peggle_failure = true;
             }
         },
         's' => quote::quote! {
-            if __backslash_char != ' ' && __backslash_char != '\t' && __backslash_char != '\n' && __backslash_char != '\r' && __backslash_char != '\x0b' && __backslash_char != '\x0c' {
+            let ' ' | '\t' | '\n' | '\r' | '\x0b' | '\x0c' = __backslash_char else {
                 __peggle_failure = true;
             }
         },
         'S' => quote::quote! {
-            if __backslash_char == ' ' || __backslash_char == '\t' || __backslash_char == '\n' || __backslash_char == '\r' || __backslash_char == '\x0b' || __backslash_char == '\x0c' {
+            if let ' ' | '\t' | '\n' | '\r' | '\x0b' | '\x0c' = __backslash_char {
                 __peggle_failure = true;
             }
         },
+        // Covers all other backslash-escaped characters
         '\\' | '{' | '}' | '[' | ']' | '(' | ')' | '^' | '$' | '.' | '|' | '*' | '+' | '?'
         | '<' | '>' | '&' => quote::quote! {
             if __backslash_char != #character {
