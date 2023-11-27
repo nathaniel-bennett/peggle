@@ -127,6 +127,13 @@ pub trait Parse: Sized {
     }
 }
 
+impl<T: Parse> Parse for Box<T> {
+    #[inline]
+    fn parse_at(index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
+        T::parse_at(index).map(|(val, idx)| (Box::new(val), idx))
+    }
+}
+
 impl Parse for bool {
     #[inline] // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
     fn parse_at(mut index: Index<'_>) -> Result<(Self, Index<'_>), ParseError> {
