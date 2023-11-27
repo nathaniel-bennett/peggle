@@ -25,6 +25,7 @@ impl<'a> Index<'a> {
     #[inline]
     pub fn peek_multiple<const N: usize>(&self) -> Option<[char; N]> {
         let mut peeked = ['\0'; N];
+        // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
 
         let mut chars = self.remaining.chars();
         for p in peeked.iter_mut() {
@@ -40,6 +41,8 @@ impl<'a> Index<'a> {
     #[inline]
     pub fn next_multiple<const N: usize>(&mut self) -> Option<[char; N]> {
         let mut all_next = ['\0'; N];
+        // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
+
         for n in all_next.iter_mut() {
             let Some(c) = self.next() else {
                 return None
@@ -59,18 +62,17 @@ impl<'a> Iterator for Index<'a> {
     type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some(c) = self.remaining.chars().next() else {
-            return None
-        };
+        let c = self.remaining.chars().next()?;
+        let len = c.len_utf8();
+        self.remaining = self.remaining.get(len..)?;
 
         if c == '\n' {
             self.lineno += 1;
             self.colno = 0;
         } else {
-            self.colno += c.len_utf8();
+            self.colno += len;
         }
 
-        self.remaining = &self.remaining[c.len_utf8()..];
         Some(c)
     }
 }
@@ -98,9 +100,14 @@ pub trait Parse: Sized {
     #[inline]
     fn parse_raw_at<'a>(index: Index<'a>) -> Result<(&'a str, Index<'a>), ParseError> {
         let (_, new_index) = Self::parse_at(index)?;
-        let bytes_taken = index.remaining.len() - new_index.remaining.len();
 
-        Ok((&index.remaining[..bytes_taken], new_index))
+        let consumed_len = index.remaining.len() - new_index.remaining.len();
+        let consumed = index
+            .remaining
+            .get(..consumed_len)
+            .ok_or(ParseError::from_index(index))?;
+
+        Ok((consumed, new_index))
     }
 
     #[inline]
@@ -121,7 +128,7 @@ pub trait Parse: Sized {
 }
 
 impl Parse for bool {
-    #[inline]
+    #[inline] // TODO: replace with `try_from_fn` once stable (https://doc.rust-lang.org/std/array/fn.try_from_fn.html)
     fn parse_at<'a>(mut index: Index<'a>) -> Result<(Self, Index<'a>), ParseError> {
         match index.next_multiple() {
             Some(['t', 'r', 'u', 'e']) => Ok((true, index)),
